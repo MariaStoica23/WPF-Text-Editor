@@ -1,0 +1,263 @@
+﻿<Window x:Class="NotepadDemo.Views.NotepadWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:NotepadDemo.Views"
+        xmlns:vm="clr-namespace:NotepadDemo.ViewModels"
+        xmlns:converters="clr-namespace:NotepadDemo.Converters"
+        xmlns:behaviors="clr-namespace:NotepadDemo.Behaviors"
+        xmlns:models="clr-namespace:NotepadDemo.Models"
+        mc:Ignorable="d"
+        Title="NotepadWindow"
+        Height="600" Width="900" 
+        Closing="Window_Closing"
+        Icon="..\Assets\notepad.png">
+    <Window.Resources>
+        <converters:InverseBoolConverter x:Key="InverseBoolConverter"/>
+        <converters:BoolToIconConverter x:Key="BoolToIconConverter"/>
+        <vm:EditorViewModel x:Key="EditorVM"/>
+    </Window.Resources>
+    <Window.InputBindings>
+        <KeyBinding Key="N" Modifiers="Ctrl"
+                Command="{Binding Tabs.NewFileCommand}"/>
+        <KeyBinding Key="O" Modifiers="Ctrl"
+                Command="{Binding Tabs.OpenFileCommand}"/>
+        <KeyBinding Key="S" Modifiers="Ctrl"
+                Command="{Binding Tabs.SaveFileCommand}"/>
+        <KeyBinding Key="S" Modifiers="Ctrl+Shift"
+                Command="{Binding Tabs.SaveFileAsCommand}"/>
+        <KeyBinding Key="F" Modifiers="Ctrl"
+                Command="{Binding ShowFindCommand}"/>
+        <KeyBinding Key="H" Modifiers="Ctrl"
+                Command="{Binding ShowReplaceCommand}"/>
+    </Window.InputBindings>
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top">
+
+            <!-- FILE -->
+            <MenuItem Header="_File">
+                <MenuItem Header="_New File"
+                          Command="{Binding Tabs.NewFileCommand}"
+                          InputGestureText="Ctrl+N"/>
+                <MenuItem Header="_Open File..."
+                          Command="{Binding Tabs.OpenFileCommand}"
+                          InputGestureText="Ctrl+O"/>
+                <Separator/>
+                <MenuItem Header="_Save File"
+                          Command="{Binding Tabs.SaveFileCommand}"
+                          InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Save File _As..."
+                          Command="{Binding Tabs.SaveFileAsCommand}"
+                          InputGestureText="Ctrl+Shift+S"/>
+                <Separator/>
+                <MenuItem Header="Close _All Files"
+                          Command="{Binding Tabs.CloseAllCommand}"/>
+                <Separator/>
+                <MenuItem Header="E_xit"
+                          Command="{Binding Tabs.ExitCommand}"
+                          InputGestureText="Alt+F4"/>
+            </MenuItem>
+
+            <!-- SEARCH -->
+            <MenuItem Header="_Search">
+                <MenuItem Header="_Find..."
+                          Command="{Binding ShowFindCommand}"
+                          InputGestureText="Ctrl+F"/>
+                <MenuItem Header="_Replace..."
+                          Command="{Binding ShowReplaceCommand}"
+                          InputGestureText="Ctrl+H"/>
+                <MenuItem Header="Replace _All..."
+                          Command="{Binding Search.ReplaceAllCommand}"/>
+                <Separator/>
+                <MenuItem Header="All _Tabs"
+                          IsCheckable="True"
+                          IsChecked="{Binding Search.SearchInAllTabs}"/>
+                <MenuItem Header="_Selected Tab"
+                          IsCheckable="True"
+                          IsChecked="{Binding Search.SearchInAllTabs, 
+                                      Converter={StaticResource InverseBoolConverter}}"/>
+            </MenuItem>
+
+            <!-- VIEW -->
+            <MenuItem Header="_View">
+                <MenuItem Header="_Standard"
+                          Command="{Binding ShowStandardViewCommand}"/>
+                <MenuItem Header="_Folder Explorer"
+                          Command="{Binding ShowExplorerViewCommand}"/>
+            </MenuItem>
+
+            <!-- HELP -->
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About"
+                          Command="{Binding ShowAboutCommand}"/>
+            </MenuItem>
+
+        </Menu>
+
+        <ToolBar DockPanel.Dock="Top">
+            <Button Command="{Binding Tabs.NewFileCommand}"
+                    ToolTip="New File (Ctrl+N)"
+                    Content="🗋"/>
+            <Button Command="{Binding Tabs.OpenFileCommand}"
+                    ToolTip="Open File (Ctrl+O)"
+                    Content="📂"/>
+            <Button Command="{Binding Tabs.SaveFileCommand}"
+                    ToolTip="Save File (Ctrl+S)"
+                    Content="💾"/>
+            <Separator/>
+            <Button Command="{Binding ShowFindCommand}"
+                    ToolTip="Find (Ctrl+F)"
+                    Content="🔍"/>
+            <Button Command="{Binding ShowReplaceCommand}"
+                    ToolTip="Replace (Ctrl+H)"
+                    Content="🔄"/>
+            <Separator/>
+            <TextBox Width="150"
+                     Text="{Binding Search.SearchText, UpdateSourceTrigger=PropertyChanged}"
+                     ToolTip="Search text"/>
+            <TextBox Width="150"
+                     Text="{Binding Search.ReplaceText, UpdateSourceTrigger=PropertyChanged}"
+                     ToolTip="Replace text"/>
+        </ToolBar>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition>
+                    <ColumnDefinition.Style>
+                        <Style TargetType="ColumnDefinition">
+                            <Setter Property="Width" Value="250"/>
+                            <Setter Property="MinWidth" Value="100"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CurrentViewMode}"
+                                 Value="{x:Static models:ViewMode.Standard}">
+                                    <Setter Property="Width" Value="0"/>
+                                    <Setter Property="MinWidth" Value="0"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ColumnDefinition.Style>
+                </ColumnDefinition>
+                <ColumnDefinition Width="4"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- EXPLORER -->
+            <TreeView Grid.Column="0"
+                      ItemsSource="{Binding FileExplorer.Roots}"
+                      Name="fileTree" 
+                      MouseDoubleClick="fileTree_MouseDoubleClick" 
+                      PreviewMouseRightButtonDown="fileTree_PreviewMouseRightButtonDown"
+                      SelectedItemChanged="fileTree_SelectedItemChanged">
+                <TreeView.Style>
+                    <Style TargetType="TreeView">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CurrentViewMode}"
+                             Value="{x:Static models:ViewMode.FolderExplorer}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TreeView.Style>
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="IsExpanded"
+                                Value="{Binding IsExpanded, Mode=TwoWay}"/>
+                        <Setter Property="IsSelected"
+                                Value="{Binding IsSelected, Mode=TwoWay}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TreeView.ItemContainerStyle>
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate ItemsSource="{Binding Items}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding IsDirectory, 
+                                              Converter={StaticResource BoolToIconConverter}}"
+                                       Margin="0,0,5,0"
+                                       FontFamily="Segoe UI Emoji"/>
+                            <TextBlock Text="{Binding Name}"/>
+                        </StackPanel>
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
+                <TreeView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="New File" Command="{Binding FileExplorer.ContextMenuNewFileCommand, Source={StaticResource EditorVM}}"/>
+                        <MenuItem Header="Copy Path"
+                                  Command="{Binding FileExplorer.ContextMenuCopyPathCommand, Source={StaticResource EditorVM}}"/>
+                        <MenuItem Header="Copy Folder"
+                                  Command="{Binding FileExplorer.ContextMenuCopyFolderCommand, Source={StaticResource EditorVM}}"/>
+                        <MenuItem Header="Paste Folder"
+                                  Command="{Binding FileExplorer.ContextMenuPasteFolderCommand, Source={StaticResource EditorVM}}"/>
+                    </ContextMenu>
+                </TreeView.ContextMenu>
+            </TreeView>
+
+            <!-- SPLITTER -->
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch">
+                <GridSplitter.Style>
+                    <Style TargetType="GridSplitter">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CurrentViewMode}"
+                                        Value="{x:Static models:ViewMode.FolderExplorer}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </GridSplitter.Style>
+            </GridSplitter>
+
+            <!-- TAB CONTROL -->
+            <TabControl Grid.Column="2" Name="tabControl"
+                ItemsSource="{Binding Tabs.Tabs}"
+                SelectedItem="{Binding Tabs.SelectedTab}">
+                <TabControl.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Title}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                                <Setter Property="Foreground" Value="Red"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <Button Content="✕"
+                                    Width="16" Height="16"
+                                    Margin="6,0,0,0"
+                                    BorderThickness="0"
+                                    Background="Transparent"
+                                    Command="{Binding DataContext.Tabs.CloseTabCommand,
+                                              RelativeSource={RelativeSource AncestorType=Window}}"
+                                    CommandParameter="{Binding}"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </TabControl.ItemTemplate>
+                <TabControl.ContentTemplate>
+                    <DataTemplate>
+                        <TextBox Text="{Binding Content, UpdateSourceTrigger=PropertyChanged}"
+                                 AcceptsReturn="True"
+                                 AcceptsTab="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas"
+                                 FontSize="13"
+                                 SelectionBrush="#3399FF"
+                                 SelectionOpacity="0.4"
+                                 IsInactiveSelectionHighlightEnabled="True"
+                                behaviors:TextBoxHighlightBehavior.SearchViewModel="{Binding DataContext.Search, RelativeSource={RelativeSource AncestorType=Window}}"/>
+                    </DataTemplate>
+                </TabControl.ContentTemplate>
+            </TabControl>
+        </Grid>
+    </DockPanel>
+</Window>
